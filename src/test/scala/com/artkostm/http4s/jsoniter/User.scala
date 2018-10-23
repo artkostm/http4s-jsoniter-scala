@@ -7,4 +7,5 @@ final case class User(name: String, age: Int)
 
 object User {
   implicit val codec: JsonValueCodec[User] = JsonCodecMaker.make[User](CodecMakerConfig())
+  implicit val listCodec: JsonValueCodec[List[User]] = JsonCodecMaker.make[List[User]](CodecMakerConfig())
 }
