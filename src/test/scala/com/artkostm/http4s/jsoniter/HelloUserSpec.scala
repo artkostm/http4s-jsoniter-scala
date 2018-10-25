@@ -1,5 +1,7 @@
 package com.artkostm.http4s.jsoniter
 
+import java.util.{Random, UUID}
+
 import cats.effect.IO
 import com.github.plokhotnyuk.jsoniter_scala.core.writeToArray
 import org.http4s._
@@ -8,8 +10,7 @@ import org.specs2.matcher.MatchResult
 import org.specs2.mutable.Specification
 
 class HelloUserSpec extends Specification {
-  private[this] val userName = "username"
-  private[this] val userJson = writeToArray(User("user name", 10))
+  import HelloUserSpec._
 
   "HelloUser" >> {
     "test1 should convert json body to object and return correct response" >> {
@@ -17,11 +18,19 @@ class HelloUserSpec extends Specification {
     }
 
     "test2 should return correct user json" >> {
-      uriReturnsCorrectJson(test2, s"""{"name":"$userName","age":20}""")
+      uriReturnsCorrectJson(test2, new String(writeToArray(user.copy(userName))))
     }
 
-    "test3 should return correct word" >> {
-      uriReturnsCorrectJson(test3, "hello")
+    "test3 should return correct string" >> {
+      uriReturnsCorrectJson(test3, greeting)
+    }
+
+    "test4 should return correct user json from future" >> {
+      uriReturnsCorrectJson(test4, new String(userJson))
+    }
+
+    "test5 should return first user" >> {
+      uriReturnsCorrectJson(test5, new String(writeToArray(users(0))))
     }
   }
 
@@ -40,6 +49,24 @@ class HelloUserSpec extends Specification {
     new HelloUserService[IO].service.orNotFound(postU).unsafeRunSync()
   }
 
+  private[this] val test4: Response[IO] = {
+    val getHU = Request[IO](Method.GET, Uri.uri("/test4"))
+    new HelloUserService[IO].service.orNotFound(getHU).unsafeRunSync()
+  }
+
+  private[this] val test5: Response[IO] = {
+    val postU = Request[IO](Method.POST, Uri.uri("/test5"), body = fs2.Stream.fromIterator[IO, Byte](writeToArray(users).toIterator))
+    new HelloUserService[IO].service.orNotFound(postU).unsafeRunSync()
+  }
+
   private[this] def uriReturnsCorrectJson(response: Response[IO], json: String): MatchResult[String] =
     response.as[String].unsafeRunSync() must beEqualTo(json)
+}
+
+object HelloUserSpec {
+  protected[jsoniter] val user = User("user name", 10)
+  protected[jsoniter] val greeting = "hello"
+  protected val userName = "username"
+  protected val userJson = writeToArray(User("user name", 10))
+  protected lazy val users = (1 to 5).map(id => User(UUID.randomUUID().toString, id * new Random().nextInt(10))).toList
 }
