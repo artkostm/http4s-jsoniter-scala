@@ -8,7 +8,7 @@ import com.github.plokhotnyuk.jsoniter_scala.core.{JsonValueCodec, readFromArray
 import org.http4s.{DecodeResult, EntityDecoder, EntityEncoder, MalformedMessageBodyFailure, MediaType}
 import org.http4s.headers.`Content-Type`
 
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 trait JsoniterInstances {
   implicit def jsoniterEntityEncoder[F[_]: Applicative, A: JsonValueCodec]: EntityEncoder[F, A] =
@@ -21,10 +21,10 @@ trait JsoniterInstances {
       EntityDecoder.collectBinary(msg).flatMap { segment =>
         val bb = ByteBuffer.wrap(segment.force.toArray)
         if (bb.hasRemaining) {
-          Try(readFromArray(bb.array())).toEither match {
-            case Right(json) =>
+          Try(readFromArray(bb.array())) match {
+            case Success(json) =>
               DecodeResult.success[F, A](json)
-            case Left(pf) =>
+            case Failure(pf) =>
               DecodeResult.failure[F, A](
                 MalformedMessageBodyFailure("Invalid JSON", Some(pf)))
           }
